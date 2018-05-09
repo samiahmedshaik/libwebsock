@@ -92,7 +92,7 @@
 #define VERSION "1.0.7"
 
 /* Define if building SSL support */
-#define WEBSOCK_HAVE_SSL 1
+/* #undef WEBSOCK_HAVE_SSL */
 
 /* libwebsock package name */
 #define WEBSOCK_PACKAGE_NAME "libwebsock"

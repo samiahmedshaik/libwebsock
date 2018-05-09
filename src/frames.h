@@ -22,11 +22,11 @@
 #include "types.h"
 
 
-void libwebsock_new_continuation_frame(libwebsock_client_state *state);
-void libwebsock_fail_and_cleanup(libwebsock_client_state *state);
+int libwebsock_new_continuation_frame(libwebsock_client_state *state);
+int libwebsock_fail_and_cleanup(libwebsock_client_state *state);
 void libwebsock_free_all_frames(libwebsock_client_state *state);
-void libwebsock_cleanup_frames(libwebsock_frame *first);
-void libwebsock_dump_frame(libwebsock_frame *frame);
+void libwebsock_cleanup_frames(libwebsock_client_state *state, libwebsock_frame *first);
+void libwebsock_dump_frame(libwebsock_client_state *state, libwebsock_frame *frame);
 
 
 #endif /* FRAMES_H_ */

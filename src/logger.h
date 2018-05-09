@@ -17,17 +17,15 @@
  * Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301  USA
  */
 
-#ifndef DEFAULT_CALLBACKS_H_
-#define DEFAULT_CALLBACKS_H_
+#ifndef LOGGER_H_
+#define LOGGER_H_
 
 #include "types.h"
 
-int libwebsock_default_onclose_callback(libwebsock_client_state *state);
-int libwebsock_default_onopen_callback(libwebsock_client_state *state);
-int libwebsock_default_onping_callback(libwebsock_client_state *state);
-int libwebsock_default_onpong_callback(libwebsock_client_state *state);
-int libwebsock_default_onmessage_callback(libwebsock_client_state *state, libwebsock_message *msg);
-int libwebsock_default_control_callback(libwebsock_client_state *state, libwebsock_frame *ctl_frame);
-int libwebsock_default_onerror_callback(libwebsock_client_state *state, unsigned short code);
+#define loginfo(fmt, args...) write_log(state->logger, INFO, __FUNCTION__, fmt, ##args)
+#define logdebug(fmt, args...) write_log(state->logger, DEBUG, __FUNCTION__, fmt, ##args)
+#define logerror(fmt, args...) write_log(state->logger, ERROR, __FUNCTION__, fmt, ##args)
 
-#endif /* DEFAULT_CALLBACKS_H_ */
+void write_log(libwebsock_logger logger, enum libwebsock_loglevel level, const char *function, const char *fmt, ...);
+
+#endif /* LOGGER_H_ */

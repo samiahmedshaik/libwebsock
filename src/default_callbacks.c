@@ -21,109 +21,168 @@
 #include <stdlib.h>
 #include <string.h>
 #include "websock.h"
+#include "logger.h"
 
-int
-libwebsock_default_onclose_callback(libwebsock_client_state *state)
+int libwebsock_default_onclose_callback(libwebsock_client_state *state)
 {
-  fprintf(stderr, "Closing connection with socket descriptor: %d\n", state->sockfd);
+  if (state->close_info)
+  {
+    return libwebsock_make_close_frame_with_reason(state, state->close_info->code, state->close_info->reason);
+  }
+  else
+  {
+    return libwebsock_make_close_frame(state);
+  }
+}
+
+int libwebsock_default_onopen_callback(libwebsock_client_state *state)
+{
   return 0;
 }
 
-int
-libwebsock_default_onopen_callback(libwebsock_client_state *state)
+int libwebsock_default_onmessage_callback(libwebsock_client_state *state, libwebsock_message *msg)
 {
-  fprintf(stderr, "New connection with socket descriptor: %d\n", state->sockfd);
   return 0;
 }
 
-int
-libwebsock_default_onmessage_callback(libwebsock_client_state *state, libwebsock_message *msg)
+int libwebsock_default_onping_callback(libwebsock_client_state *state)
 {
-  libwebsock_send_text(state, msg->payload);
+  if (!state->current_frame)
+  {
+    logerror("current_frame in the state is NULL");
+    return -1;
+  }
+
+  libwebsock_frame *frame = state->current_frame;
+  return libwebsock_make_pong_frame(state, frame->rawdata + frame->payload_offset, frame->payload_len);
+}
+
+int libwebsock_default_onpong_callback(libwebsock_client_state *state)
+{
   return 0;
 }
 
-int
-libwebsock_default_control_callback(libwebsock_client_state *state, libwebsock_frame *ctl_frame)
+int libwebsock_default_onerror_callback(libwebsock_client_state *state, unsigned short code)
 {
-  struct evbuffer *output = bufferevent_get_output(state->bev);
+  return libwebsock_make_close_frame_with_reason(state, code, NULL);
+}
+
+int libwebsock_default_control_callback(libwebsock_client_state *state, libwebsock_frame *ctl_frame)
+{
   int i;
-  unsigned short code;
-  unsigned short code_be;
+  int retval = 0;
 
-  if ((state->flags & STATE_SENT_CLOSE_FRAME) && (ctl_frame->opcode != WS_OPCODE_CLOSE)) {
-    return 0;
-  }
-  if (ctl_frame->payload_len > 125) {
-    libwebsock_fail_connection(state, WS_CLOSE_PROTOCOL_ERROR);
-    if (ctl_frame->opcode == WS_OPCODE_CLOSE) {
-      libwebsock_shutdown(state);
-    }
-    return 0;
+  /*
+   * if the close frame has been sent then no need to process any more data 
+   */
+
+  if ((state->flags & STATE_SENT_CLOSE_FRAME) && (ctl_frame->opcode != WS_OPCODE_CLOSE))
+  {
+    logdebug(" data received after sending close frame. Ignoring the data");
+    return retval;
   }
 
-  //servify frame
-  for (i = 0; i < ctl_frame->payload_len; i++) {
-    //this demasks the payload while shifting it 4 bytes to the left.
-    *(ctl_frame->rawdata + ctl_frame->payload_offset + i - 4) =
+  /*
+   * control frame cannot be greater than 125 bytes 
+   */
+
+  if (ctl_frame->payload_len > 125)
+  {
+    logerror("control frame payload greater than 125 bytes - %u", ctl_frame->payload_len);
+    return libwebsock_error(state, WS_CLOSE_PROTOCOL_ERROR);
+  }
+
+  for (i = 0; i < ctl_frame->payload_len; i++)
+  {
+    //this demasks the payload
+    *(ctl_frame->rawdata + ctl_frame->payload_offset + i) =
         *(ctl_frame->rawdata + ctl_frame->payload_offset + i) ^ (ctl_frame->mask[i % 4] & 0xff);
   }
-  ctl_frame->payload_offset -= 4;
-  *(ctl_frame->rawdata + 1) &= 0x7f; //strip mask bit
-  switch (ctl_frame->opcode) {
-    case WS_OPCODE_CLOSE:  //close frame
-      if (!state->close_info && ctl_frame->payload_len >= 2) {
-        libwebsock_populate_close_info_from_frame(&state->close_info, ctl_frame);
-      }
-      if (ctl_frame->payload_len > 0 && ctl_frame->payload_len < 2) {
-        libwebsock_fail_connection(state, WS_CLOSE_PROTOCOL_ERROR);
-        libwebsock_shutdown(state);
-        return 0;
-      }
-      if (state->close_info) {
-        code = state->close_info->code;
-        if ((code >= 0 && code < WS_CLOSE_NORMAL) || code == WS_CLOSE_RESERVED || code == WS_CLOSE_NO_CODE
-            || code == WS_CLOSE_DIRTY || (code > 1011 && code < 3000)) {
 
-          code_be = htobe16(WS_CLOSE_PROTOCOL_ERROR);
-          memcpy(ctl_frame->rawdata + ctl_frame->payload_offset, &code_be, 2);
-        } else if (!validate_utf8_sequence((uint8_t *)state->close_info->reason)) {
-          code_be = htobe16(WS_CLOSE_WRONG_TYPE);
-          memcpy(ctl_frame->rawdata + ctl_frame->payload_offset, &code_be, 2);
-        }
+  switch (ctl_frame->opcode)
+  {
+  case WS_OPCODE_CLOSE: //close frame
+
+    logdebug("received close frame");
+
+    if (ctl_frame->payload_len == 1)
+    {
+      logerror("payload len is 1 byte");
+      return libwebsock_error(state, WS_CLOSE_PROTOCOL_ERROR);
+    }
+
+    if (!state->close_info && ctl_frame->payload_len >= 2)
+    {
+      logdebug("populating close info");
+      libwebsock_populate_close_info_from_frame(&state->close_info, ctl_frame);
+    }
+
+    if (state->close_info)
+    {
+      unsigned short code = state->close_info->code;
+
+      if ((code >= 0 && code < WS_CLOSE_NORMAL) || code == WS_CLOSE_RESERVED ||
+          code == WS_CLOSE_NO_CODE || code == WS_CLOSE_DIRTY || (code > 1011 && code < 3000))
+      {
+        logerror("Invalid close code %u in the payload", code);
+        return libwebsock_error(state, WS_CLOSE_PROTOCOL_ERROR);
       }
-      if ((state->flags & STATE_SENT_CLOSE_FRAME) == 0){
-        //client request close.  Echo close frame as acknowledgement
-        state->flags |= STATE_SHOULD_CLOSE|STATE_SENT_CLOSE_FRAME|STATE_RECEIVED_CLOSE_FRAME;
-        evbuffer_add(output, ctl_frame->rawdata, ctl_frame->payload_offset + ctl_frame->payload_len);
-        if (state->flags & STATE_IS_SSL) {
-          libwebsock_shutdown(state);
-        } else {
-          bufferevent_setcb(state->bev, NULL, libwebsock_shutdown_after_send, NULL, (void *) state);
-        }
-        return 0;
-      } else {
-        if ((state->flags & STATE_RECEIVED_CLOSE_FRAME) == 0) { //received first close frame and already sent.
-          state->flags |= STATE_RECEIVED_CLOSE_FRAME;
-          libwebsock_shutdown(state);
-        } else {
-          //received second close frame?
-          return 0;
-        }
+      else if (!validate_utf8_sequence((uint8_t *)state->close_info->reason))
+      {
+        logerror("payload is not valid UTF-8 sequence", code);
+        return libwebsock_error(state, WS_CLOSE_WRONG_TYPE);
       }
-      break;
-    case WS_OPCODE_PING:
-      *(ctl_frame->rawdata) = 0x8a;
-      evbuffer_add(output, ctl_frame->rawdata, ctl_frame->payload_offset + ctl_frame->payload_len);
-      break;
-    case WS_OPCODE_PONG:
-      if (state->onpong != NULL) {
-        state->onpong(state);
+    }
+
+    if ((state->flags & STATE_SENT_CLOSE_FRAME) == 0)
+    {
+      //client request close.  Echo close frame as acknowledgement
+      state->flags |= STATE_RECEIVED_CLOSE_FRAME;
+      if (state->onclose)
+      {
+        logdebug("calling onclose callback...");
+        retval = state->onclose(state);
       }
-      break;
-    default:
-      libwebsock_fail_connection(state, WS_CLOSE_PROTOCOL_ERROR);
-      break;
+    }
+    else
+    {
+      if ((state->flags & STATE_RECEIVED_CLOSE_FRAME) == 0)
+      {
+        logdebug("received acknowledgement to the sent close frame");
+        return -1;
+      }
+      else
+      {
+        //received second close frame?
+        logdebug("received second close frame");
+        return -1;
+      }
+    }
+    break;
+
+  case WS_OPCODE_PING:
+
+    logdebug("received ping frame");
+    if (state->onping)
+    {
+      retval = state->onping(state);
+    }
+
+    break;
+  case WS_OPCODE_PONG:
+
+    logdebug("received pong frame");
+    if (state->onpong)
+    {
+      retval = state->onpong(state);
+    }
+    break;
+
+  default:
+    logerror("received unknown control frame");
+    retval = libwebsock_error(state, WS_CLOSE_PROTOCOL_ERROR);
+    break;
   }
-  return 1;
+
+  return retval;
 }
