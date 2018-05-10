@@ -2,7 +2,7 @@
 # Process this file with autoconf to produce a configure script.
 
 AC_PREREQ([2.60])
-AC_INIT([libwebsock], [1.0.7], [payden@paydensutherland.com])
+AC_INIT([libwebsock], [2.0], [payden@paydensutherland.com])
 AM_INIT_AUTOMAKE
 AC_DISABLE_STATIC
 AC_CONFIG_SRCDIR([src/websock.c])
@@ -28,3 +28,4 @@ AC_DEFINE_UNQUOTED([WEBSOCK_PACKAGE_STRING], ["$PACKAGE_STRING"], [libwebsock pa
 AC_DEFINE_UNQUOTED([WEBSOCK_PACKAGE_NAME], ["$PACKAGE_NAME"], [libwebsock package name])
 AC_CONFIG_FILES([Makefile src/Makefile examples/Makefile])
 AC_OUTPUT
+
