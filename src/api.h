@@ -22,25 +22,15 @@
 
 #include "types.h"
 
-int libwebsock_ping(libwebsock_client_state *state);
-int libwebsock_close(libwebsock_client_state *state);
-int libwebsock_close_with_reason(libwebsock_client_state *state, unsigned short code, const char *reason);
-int libwebsock_send_binary(libwebsock_client_state *state, char *in_data, unsigned int payload_len);
-int libwebsock_send_all_text(libwebsock_context *ctx, char *strdata);
-int libwebsock_send_text(libwebsock_client_state *state, char *strdata);
-int libwebsock_send_text_with_length(libwebsock_client_state *state, char *strdata, unsigned int payload_len);
-void libwebsock_wait(libwebsock_context *ctx);
-void libwebsock_bind(libwebsock_context *ctx, char *listen_host, char *port);
-void libwebsock_bind_socket(libwebsock_context *ctx, evutil_socket_t sockfd);
-char *libwebsock_version_string(void);
-libwebsock_context *libwebsock_init(void);
-libwebsock_context *libwebsock_init_flags(int flags);
-libwebsock_context *libwebsock_init_base(struct event_base *base, int flags);
-
-#ifdef WEBSOCK_HAVE_SSL
-void libwebsock_bind_ssl(libwebsock_context *ctx, char *listen_host, char *port, char *keyfile, char *certfile);
-void libwebsock_bind_ssl_real(libwebsock_context *ctx, char *listen_host, char *port, char *keyfile, char *certfile, char *chainfile);
-#endif
-
+const char *libwebsock_version_string(void);
+int libwebsock_make_ping_frame(libwebsock_client_state *state);
+int libwebsock_make_pong_frame(libwebsock_client_state *state, const char *data, unsigned int len);
+int libwebsock_make_close_frame(libwebsock_client_state *state);
+int libwebsock_make_close_frame_with_reason(libwebsock_client_state *state, unsigned short code, const char *reason);
+int libwebsock_make_binary_data_frame(libwebsock_client_state *state, char *in_data, unsigned int payload_len);
+int libwebsock_make_text_data_frame(libwebsock_client_state *state, char *strdata);
+int libwebsock_make_text_data_frame_with_length(libwebsock_client_state *state, char *strdata, unsigned int payload_len);
+libwebsock_client_state *libwebsock_client_init(void);
+void libwebsock_client_destroy(libwebsock_client_state *state);
 
 #endif /* API_H_ */

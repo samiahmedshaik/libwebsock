@@ -21,48 +21,35 @@
 
 //this bit hides differences between systems on big-endian conversions
 #if defined(__linux__)
-#  include <endian.h>
+#include <endian.h>
 #elif defined(__FreeBSD__) || defined(__NetBSD__)
-#  include <sys/endian.h>
+#include <sys/endian.h>
 #elif defined(__OpenBSD__)
-#  include <sys/types.h>
-#  define be16toh(x) betoh16(x)
-#  define be64toh(x) betoh64(x)
+#include <sys/types.h>
+#define be16toh(x) betoh16(x)
+#define be64toh(x) betoh64(x)
 #endif
 
 #ifndef be16toh
-#  define be16toh(x) lws_be16toh(x)
+#define be16toh(x) lws_be16toh(x)
 #endif
 
 #ifndef be64toh
-#  define be64toh(x) lws_be64toh(x)
+#define be64toh(x) lws_be64toh(x)
 #endif
 
 #ifndef htobe16
-#  define htobe16(x) lws_htobe16(x)
+#define htobe16(x) lws_htobe16(x)
 #endif
 
 #ifndef htobe64
-#  define htobe64(x) lws_htobe64(x)
-#endif
-
-#ifdef _WIN32
-#include <ws2tcpip.h>
+#define htobe64(x) lws_htobe64(x)
 #endif
 
 #include <assert.h>
 #include <stdint.h>
-#include <event2/event.h>
-#include <event2/buffer.h>
-#include <event2/bufferevent.h>
-#include <event2/thread.h>
 #include <wchar.h>
 #include <errno.h>
-#ifdef WEBSOCK_HAVE_SSL
-#include <openssl/ssl.h>
-#include <openssl/err.h>
-#include <event2/bufferevent_ssl.h>
-#endif
 
 #include <pthread.h>
 
@@ -72,7 +59,6 @@
 #include "default_callbacks.h"
 #include "utf.h"
 #include "util.h"
-
 
 #define PORT_STRLEN 12
 #define LISTEN_BACKLOG 10
@@ -102,54 +88,21 @@
 #define WS_CLOSE_MESSAGE_TOO_BIG 1009
 #define WS_CLOSE_UNEXPECTED_ERROR 1011
 
+#define STATE_CONNECTING (1 << 0)
+#define STATE_CONNECTED (1 << 1)
+#define STATE_RECEIVING_FRAGMENT (1 << 2)
+#define STATE_RECEIVED_CLOSE_FRAME (1 << 3)
+#define STATE_SENT_CLOSE_FRAME (1 << 4)
+#define STATE_PROCESSING_ERROR (1 << 5)
+#define STATE_NEEDS_MORE_DATA (1 << 6)
+#define STATE_SHOULD_CLOSE (1 << 7)
 
-#define STATE_SHOULD_CLOSE (1 << 0)
-#define STATE_SENT_CLOSE_FRAME (1 << 1)
-#define STATE_CONNECTING (1 << 2)
-#define STATE_IS_SSL (1 << 3)
-#define STATE_CONNECTED (1 << 4)
-#define STATE_SENDING_FRAGMENT (1 << 5)
-#define STATE_RECEIVING_FRAGMENT (1 << 6)
-#define STATE_RECEIVED_CLOSE_FRAME (1 << 7)
-#define STATE_FAILING_CONNECTION (1 << 8)
-
-//globals
-extern pthread_mutex_t global_alloc_free_lock;
-
-//function defs
-
-
-int libwebsock_send_fragment(libwebsock_client_state *state, const char *data, unsigned int len, int flags);
-void libwebsock_send_cleanup(const void *data, size_t len, void *arg);
-void libwebsock_cleanup_thread_list(evutil_socket_t sock, short what, void *arg);
-void libwebsock_cancel_state_threads(libwebsock_client_state *state);
-void libwebsock_insert_into_thread_list(libwebsock_client_state *state, pthread_t *tptr, enum WS_THREAD_TYPE type);
-void libwebsock_shutdown(libwebsock_client_state *state);
-void libwebsock_shutdown_after_send_cb(evutil_socket_t fd, short what, void *arg);
-void libwebsock_shutdown_after_send(struct bufferevent *bev, void *arg);
-void libwebsock_post_shutdown_cleanup(evutil_socket_t fd, short what, void *arg);
+void libwebsock_cleanup_outdata(libwebsock_client_state *state);
+void libwebsock_cleanup_indata(libwebsock_client_state *state);
 void libwebsock_populate_close_info_from_frame(libwebsock_close_info **info, libwebsock_frame *close_frame);
-void libwebsock_fail_connection(libwebsock_client_state *state, unsigned short close_code);
-void libwebsock_cleanup_context(libwebsock_context *ctx);
-void libwebsock_handle_signal(evutil_socket_t sig, short event, void *ptr);
-void libwebsock_handle_control_frame(libwebsock_client_state *state);
-void libwebsock_dispatch_message(libwebsock_client_state *state);
-void libwebsock_handle_accept(evutil_socket_t listener, short event, void *arg);
-void libwebsock_handle_send(struct bufferevent *bev, void *ptr);
-void libwebsock_handle_recv(struct bufferevent *bev, void *ptr);
-void libwebsock_handle_client_event(libwebsock_context *ctx, libwebsock_client_state *state);
-void libwebsock_do_read(struct bufferevent *bev, void *ptr);
-void libwebsock_do_event(struct bufferevent *bev, short event, void *ptr);
-void libwebsock_handshake_finish(struct bufferevent *bev, libwebsock_client_state *state);
-void libwebsock_handshake(struct bufferevent *bev, void *ptr);
-void *libwebsock_pthread_onmessage(void *arg);
-void *libwebsock_pthread_onclose(void *arg);
-void *libwebsock_pthread_onopen(void *arg);
-void libwebsock_fragmented_add(libwebsock_fragmented *frag, char *buf, unsigned int len);
-void libwebsock_fragmented_finish(libwebsock_fragmented *frag);
-libwebsock_fragmented *libwebsock_fragmented_new(libwebsock_client_state *state);
-
-#ifdef WEBSOCK_HAVE_SSL
-void libwebsock_handle_accept_ssl(evutil_socket_t listener, short event, void *arg);
-#endif
-
+int libwebsock_error(libwebsock_client_state *state, unsigned short error_code);
+int libwebsock_handle_control_frame(libwebsock_client_state *state);
+int libwebsock_dispatch_message(libwebsock_client_state *state);
+int libwebsock_handle_recv(libwebsock_client_state *state, const char *data, size_t len);
+int libwebsock_populate_handshake(libwebsock_client_state *state, const char *data, size_t len);
+int libwebsock_make_fragment(libwebsock_client_state *state, const char *data, unsigned int len, int flags);
