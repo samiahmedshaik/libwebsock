@@ -1,32 +1,18 @@
 # libwebsock
 
-C library for easy WebSockets servers.
+A simple C library for processing WebSocket protocol messages.
 
 This library allows a developer to quickly develop WebSocket servers by focusing
 on the actual logic of your WebSocket implementation instead of the details
-of the WebSocket protocol or even specifics of C sockets.
-
-Installation instructions can be found [here][6].
-
-API reference & usage instructions can be found [here][7].
-
-To get started, have a look at [echo.c][1] in the examples directory of the package.  A
-simple echo server is implemented.
-
-You can find the latest autobahn test results [here][3].
-
-Current Travis CI Build Status:
-
-[![Build Status][4]][5]
+of the WebSocket protocol.
 
 ## Features
 
-* Callbacks for events
-* SSL Support
 * Easy to use
-* Uses [libevent][2] for portability (tested on Linux/FreeBSD)
-* IPv6 support
+* No dependencies on any external libraries
 * No failures on Autobahn Test suite
+
+Note: As this library is only for processing WebSocket protocol messages, building the communication layer is the responsibility of the developer.
 
  [1]: https://github.com/payden/libwebsock/blob/master/examples/echo.c
  [2]: http://libevent.org
