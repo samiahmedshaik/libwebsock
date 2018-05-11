@@ -103,6 +103,4 @@ typedef struct _libwebsock_client_state
 } libwebsock_client_state;
 
 #endif /* TYPES_H_ */
-k_client_state;
 
-#endif /* TYPES_H_ */
