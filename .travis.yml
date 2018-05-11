@@ -3,4 +3,5 @@ compiler:
   - gcc
 before_install:
   - sudo apt-get update -qq
-script: ./autogen.sh && ./configure && make
+script:
+  - ./autogen.sh && ./configure && make
