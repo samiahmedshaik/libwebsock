@@ -98,7 +98,6 @@
 #define STATE_SHOULD_CLOSE (1 << 7)
 
 void libwebsock_cleanup_outdata(libwebsock_client_state *state);
-void libwebsock_cleanup_indata(libwebsock_client_state *state);
 void libwebsock_populate_close_info_from_frame(libwebsock_close_info **info, libwebsock_frame *close_frame);
 int libwebsock_error(libwebsock_client_state *state, unsigned short error_code);
 int libwebsock_handle_control_frame(libwebsock_client_state *state);

@@ -88,11 +88,9 @@ typedef struct _libwebsock_client_state
         int flags;
         char hostname[64];
         libwebsock_string *out_data;
-        libwebsock_message *in_data;
         libwebsock_frame *current_frame;        
         int (*onmessage)(struct _libwebsock_client_state *, libwebsock_message *);
         int (*oncontrol)(struct _libwebsock_client_state *, libwebsock_frame *);
-        int (*onopen)(struct _libwebsock_client_state *);
         int (*onclose)(struct _libwebsock_client_state *);
         int (*onpong)(struct _libwebsock_client_state *);
         int (*onping)(struct _libwebsock_client_state *);
@@ -103,5 +101,8 @@ typedef struct _libwebsock_client_state
         void (*writelog)(libwebsock_logger logger, enum libwebsock_loglevel level, const char *function, const char *fmt, ...);
 
 } libwebsock_client_state;
+
+#endif /* TYPES_H_ */
+k_client_state;
 
 #endif /* TYPES_H_ */

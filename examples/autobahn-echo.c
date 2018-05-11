@@ -1,5 +1,3 @@
-
-
 #include <stdio.h>
 #include <errno.h>
 #include <stdlib.h>
@@ -9,62 +7,36 @@
 #include <netinet/in.h>
 #include <netdb.h>
 #include <sys/select.h>
+#include <fcntl.h>
 #include <websock/websock.h>
 
 #define PORT 9001
 #define MAXMSG 4 * 1024
 
-void startprocessing(int socket)
+int write_to_client(int socket, libwebsock_client_state *state)
 {
-  fd_set write_fd_set, read_fd_set;
+  int nbytes,retval = 0;
 
-  libwebsock_client_state *client_state = libwebsock_client_init();
-
-  //client_state->
-
-  while (1)
+  if (state->out_data)
   {
-    /* Initialize the set of active sockets. */
-    FD_ZERO(&read_fd_set);
-    FD_ZERO(&write_fd_set);
-    FD_SET(socket, &read_fd_set);
-    FD_SET(socket, &write_fd_set);
-
-    /* Block until input arrives on one or more active sockets. */
-    if (select(1, &read_fd_set, &write_fd_set, NULL, NULL) < 0)
+    nbytes = write(socket, state->out_data->data, state->out_data->data_sz);
+    if (nbytes <= 0)
     {
-      perror("select failed");
-      exit(EXIT_FAILURE);
+      /* Write error. */
+      perror("write failed");
+      retval = -1;
     }
 
-    if (FD_ISSET(socket, &read_fd_set))
-    {
-      /* Data arriving on an already-connected socket. */
-      if (read_from_client(socket, client_state) < 0)
-      {
-        close(socket);
-        break;
-      }
-    }
-
-    if (FD_ISSET(socket, &write_fd_set))
-    {
-      /* Data to be sent on connected socket. */
-      if (write_to_client(socket, client_state) < 0)
-      {
-        close(socket);
-        break;
-      }
-    }
+    libwebsock_cleanup_outdata(state);
   }
 
-  libwebsock_client_destroy(client_state);
+  return retval;
 }
 
 int read_from_client(int socket, libwebsock_client_state *state)
 {
   char buffer[MAXMSG] = {'\0'};
-  int nbytes;
+  int nbytes, retval = -1;
 
   nbytes = read(socket, buffer, MAXMSG);
   if (nbytes <= 0)
@@ -76,76 +48,74 @@ int read_from_client(int socket, libwebsock_client_state *state)
   /* Data read. */
   if (state->flags & STATE_CONNECTING)
   {
-    return libwebsock_populate_handshake(state, buffer, nbytes);
+    if (libwebsock_populate_handshake(state, buffer, nbytes) != -1)
+    {
+      retval = write_to_client(socket, state);
+    }
   }
   else if (libwebsock_handle_recv(state, buffer, nbytes) == -1)
   {
     if (state->flags & STATE_NEEDS_MORE_DATA == 0)
     {
-      return -1;
+      retval = -1;
+    }
+    else
+    {
+      retval = 0;
     }
   }
-  return 0;
+  else
+  {
+    retval = write_to_client(socket, state);
+
+    if (state->flags & STATE_SHOULD_CLOSE)
+    {
+      retval = -1;
+    }
+  }
+
+  return retval;
 }
 
-int write_to_client(int socket, libwebsock_client_state *state)
+int onmessage_callback(libwebsock_client_state *state, libwebsock_message *msg)
 {
-  char buffer[MAXMSG];
-  int nbytes;
-
-  if (state->out_data)
+  switch (msg->opcode)
   {
-    nbytes = write(socket, buffer, nbytes);
-
-    if (nbytes <= 0)
+  case WS_OPCODE_TEXT:
+    if (libwebsock_make_text_data_frame_with_length(state, msg->payload, msg->payload_len) == -1)
     {
-      /* Write error. */
-      perror("write failed");
       return -1;
     }
-  }
-
-  // echo the data back to client
-  if (state->in_data)
-  {
-
-    libwebsock_message *msg = state->in_data;
-
-    switch (msg->opcode)
+    break;
+  case WS_OPCODE_BINARY:
+    if (libwebsock_make_binary_data_frame(state, msg->payload, msg->payload_len) == -1)
     {
-    case WS_OPCODE_TEXT:
-      if (libwebsock_make_text_data_frame_with_length(state, msg->payload, msg->payload_len) == -1)
-      {
-        return -1;
-      }
-      break;
-    case WS_OPCODE_BINARY:
-      if (libwebsock_make_binary_data_frame(state, msg->payload, msg->payload_len) == -1)
-      {
-        return -1;
-      }
-      break;
-    default:
-      perror("Unknown opcode");
       return -1;
     }
-
-    if (state->out_data)
-    {
-      nbytes = write(socket, buffer, nbytes);
-
-      if (nbytes <= 0)
-      {
-        /* Write error. */
-        perror("write failed");
-        return -1;
-      }
-    }
+    break;
+  default:
+    perror("Unknown opcode");
+    return -1;
   }
-
-  return 0;
 }
 
+void do_processing(int socket)
+{
+  libwebsock_client_state *client_state = libwebsock_client_init();
+  client_state->onmessage = onmessage_callback;
+
+  while (1)
+  {
+    /* Data arriving on an already-connected socket. */
+    if (read_from_client(socket, client_state) < 0)
+    {
+      close(socket);
+      break;
+    }
+  }
+
+  libwebsock_client_destroy(client_state);
+}
 int main(int argc, char *argv[])
 {
   int listening_socket, accepted_socket, i, client_size, port;
@@ -208,11 +178,9 @@ int main(int argc, char *argv[])
 
     if (pid == 0)
     {
-
       /* This is the client process */
       close(listening_socket);
-
-      startprocessing(accepted_socket);
+      do_processing(accepted_socket);
       exit(0);
     }
     else
@@ -221,63 +189,3 @@ int main(int argc, char *argv[])
     }
   } /* end of while */
 }
-
-/*
-int
-onmessage(libwebsock_client_state *state, libwebsock_message *msg)
-{
-  switch (msg->opcode) {
-    case WS_OPCODE_TEXT:
-      libwebsock_make_text_data_frame_with_length(state, msg->payload, msg->payload_len);
-      break;
-    case WS_OPCODE_BINARY:
-      libwebsock_make_binary_data_frame(state, msg->payload, msg->payload_len);
-      break;
-    default:
-      fprintf(stderr, "Unknown opcode: %d\n", msg->opcode);
-      break;
-  }
-  return 0;
-}
-
-int
-onopen(libwebsock_client_state *state)
-{
-  fprintf(stderr, "onopen: %d\n", state->sockfd);
-  return 0;
-}
-
-int
-onclose(libwebsock_client_state *state)
-{
-  fprintf(stderr, "onclose: %d\n", state->sockfd);
-  return 0;
-}
-*/
-
-/*
-int
-main(int argc, char *argv[])
-{
-  libwebsock_context *ctx = NULL;
-  if (argc != 2) {
-    fprintf(stderr, "Usage: %s <port to listen on>\n\nNote: You must be root to bind to port below 1024\n", argv[0]);
-    exit(0);
-  }
-
-  ctx = libwebsock_init();
-  if (ctx == NULL ) {
-    fprintf(stderr, "Error during libwebsock_init.\n");
-    exit(1);
-  }
-  libwebsock_bind(ctx, "0.0.0.0", argv[1]);
-  fprintf(stderr, "libwebsock listening on port %s\n", argv[1]);
-  ctx->onmessage = onmessage;
-  ctx->onopen = onopen;
-  ctx->onclose = onclose;
-  libwebsock_wait(ctx);
-  //perform any cleanup here.
-  fprintf(stderr, "Exiting.\n");
-  return 0;
-}
-*/

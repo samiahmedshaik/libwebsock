@@ -25,6 +25,7 @@
 
 int libwebsock_fail_and_cleanup(libwebsock_client_state *state)
 {
+  state->flags |= STATE_SHOULD_CLOSE;
   return libwebsock_error(state, WS_CLOSE_PROTOCOL_ERROR);
 }
 

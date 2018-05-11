@@ -35,11 +35,6 @@ int libwebsock_default_onclose_callback(libwebsock_client_state *state)
   }
 }
 
-int libwebsock_default_onopen_callback(libwebsock_client_state *state)
-{
-  return 0;
-}
-
 int libwebsock_default_onmessage_callback(libwebsock_client_state *state, libwebsock_message *msg)
 {
   return 0;
@@ -108,7 +103,7 @@ int libwebsock_default_control_callback(libwebsock_client_state *state, libwebso
     if (ctl_frame->payload_len == 1)
     {
       logerror("payload len is 1 byte");
-      return libwebsock_error(state, WS_CLOSE_PROTOCOL_ERROR);
+      return libwebsock_fail_and_cleanup(state);
     }
 
     if (!state->close_info && ctl_frame->payload_len >= 2)
@@ -130,7 +125,7 @@ int libwebsock_default_control_callback(libwebsock_client_state *state, libwebso
       else if (!validate_utf8_sequence((uint8_t *)state->close_info->reason))
       {
         logerror("payload is not valid UTF-8 sequence", code);
-        return libwebsock_error(state, WS_CLOSE_WRONG_TYPE);
+        return libwebsock_fail_and_cleanup(state);
       }
     }
 

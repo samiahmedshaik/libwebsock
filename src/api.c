@@ -92,8 +92,6 @@ int libwebsock_make_close_frame_with_reason(libwebsock_client_state *state, unsi
 
   int flags = WS_FRAGMENT_FIN | WS_OPCODE_CLOSE;
   int ret = libwebsock_make_fragment(state, buf, len, flags);
-
-  state->flags &= ~STATE_PROCESSING_ERROR;
   state->flags |= STATE_SENT_CLOSE_FRAME;
   return ret;
 }
@@ -122,7 +120,6 @@ int libwebsock_make_binary_data_frame(libwebsock_client_state *state, char *in_d
 libwebsock_client_state *libwebsock_client_init(void)
 {
   libwebsock_client_state *state = (libwebsock_client_state *)lws_calloc(sizeof(libwebsock_client_state));
-  state->onopen = libwebsock_default_onopen_callback;
   state->oncontrol = libwebsock_default_control_callback;
   state->onmessage = libwebsock_default_onmessage_callback;
   state->onping = libwebsock_default_onping_callback;
@@ -145,7 +142,6 @@ void libwebsock_client_destroy(libwebsock_client_state *state)
       state->close_info = NULL;
     }
     libwebsock_cleanup_outdata(state);
-    libwebsock_cleanup_indata(state);
     libwebsock_free_all_frames(state);
     lws_free(state);
   }
