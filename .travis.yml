@@ -4,6 +4,6 @@ compiler:
 before_install:
   - sudo apt-get update -qq
 script:
-  - ./autogen.sh && ./configure && make
+  - ./autogen.sh && ./configure && make install
   - cd examples && make autobahn-echo
   - pip install autobahntestsuite
