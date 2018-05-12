@@ -5,3 +5,5 @@ before_install:
   - sudo apt-get update -qq
 script:
   - ./autogen.sh && ./configure && make
+  - cd examples && make autobahn-echo
+  - pip install autobahntestsuite
