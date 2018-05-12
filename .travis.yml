@@ -3,8 +3,9 @@ compiler:
   - gcc
 before_install:
   - sudo apt-get update -qq
+  - sudo pip install autobahntestsuite
+
 script:
   - ./autogen.sh && ./configure && sudo make install
   - cd examples && make autobahn-echo && ./autobahn-echo 9001 &
-  - sudo pip install autobahntestsuite
   - wstest --help
