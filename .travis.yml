@@ -4,6 +4,7 @@ compiler:
 before_install:
   - sudo apt-get update -qq
   - sudo pip install phyton 2.7.15
+  - sudo pip install --upgrade six
   - sudo pip install autobahntestsuite
 
 script:
