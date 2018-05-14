@@ -172,6 +172,7 @@ int libwebsock_dispatch_message(libwebsock_client_state *state)
 	libwebsock_frame *current = state->current_frame;
 	char *message_payload, *message_payload_orig, *rawdata_ptr;
 	int retval = 0;
+	libwebsock_message *msg = NULL;
 
 	state->flags &= ~STATE_RECEIVING_FRAGMENT;
 	if (state->flags & STATE_SENT_CLOSE_FRAME)
@@ -224,13 +225,22 @@ int libwebsock_dispatch_message(libwebsock_client_state *state)
 	libwebsock_cleanup_frames(state, first);
 	state->current_frame = NULL;
 
-	logdebug("populating in_data. length of payload is %u", message_payload_len);
-	state->in_data = (libwebsock_message *)lws_malloc(sizeof(libwebsock_message));
-	state->in_data->opcode = message_opcode;
-	state->in_data->payload_len = message_payload_len;
-	state->in_data->payload = lws_calloc(message_payload_len + 1);
-	memcpy(state->in_data->payload, message_payload_orig, message_payload_len);
-	state->in_data->payload[message_payload_len] = '\0';
+	msg = (libwebsock_message *)lws_malloc(sizeof(libwebsock_message));
+	msg->opcode = message_opcode;
+	msg->payload_len = message_payload_len;
+	msg->payload = lws_calloc(message_payload_len + 1);
+	memcpy(msg->payload, message_payload_orig, message_payload_len);
+	msg->payload[message_payload_len] = '\0';
+
+	if (state->onmessage)
+	{
+		logdebug("calling the onmessage callback");
+		retval = state->onmessage(state, msg);
+	}
+
+	lws_free(message_payload_orig);
+	lws_free(msg->payload);
+	lws_free(msg);
 	return retval;
 }
 
@@ -249,22 +259,6 @@ void libwebsock_cleanup_outdata(libwebsock_client_state *state)
 	}
 }
 
-void libwebsock_cleanup_indata(libwebsock_client_state *state)
-{
-	if (state->in_data)
-	{
-		if (state->in_data->payload)
-		{
-			lws_free((void *)state->in_data->payload);
-			state->in_data->payload = NULL;
-		}
-
-		state->in_data->payload_len = 0;
-		lws_free((void *)state->in_data);
-		state->in_data = NULL;
-	}
-}
-
 int libwebsock_make_fragment(libwebsock_client_state *state, const char *data,
 							 unsigned int len, int flags)
 {
@@ -273,10 +267,7 @@ int libwebsock_make_fragment(libwebsock_client_state *state, const char *data,
 	unsigned short int *payload_len_short_be;
 	unsigned char finNopcode, payload_len_small;
 	unsigned int payload_offset = 2;
-	unsigned int frame_size;
-
-	// clean up the out data
-	libwebsock_cleanup_outdata(state);
+	unsigned int frame_size, current_size = 0;
 
 	logdebug("called with len %u, flags are as follows:", len);
 
@@ -309,9 +300,15 @@ int libwebsock_make_fragment(libwebsock_client_state *state, const char *data,
 		logdebug("|STATE_PROCESSING_ERROR");
 	}
 
-	if ((state->flags & STATE_CONNECTED) == 0 || (state->flags & STATE_SENT_CLOSE_FRAME) != 0)
+	if ((state->flags & STATE_SENT_CLOSE_FRAME) != 0 && (state->flags & STATE_RECEIVED_CLOSE_FRAME) != 0)
 	{
-		logerror("failed to make the fragment as the client state is either not connected or close frame has already been sent");
+		logerror("failed to make the fragment as the close frame has been sent/received");
+		return -1;
+	}
+
+	if ((state->flags & STATE_CONNECTED) == 0)
+	{
+		logerror("failed to make the fragment as the client state is not connected");
 		return -1;
 	}
 
@@ -347,8 +344,14 @@ int libwebsock_make_fragment(libwebsock_client_state *state, const char *data,
 		state->out_data->data_sz = frame_size;
 		state->out_data->data = (char *)lws_calloc(frame_size);
 	}
+	else
+	{
+		current_size = state->out_data->data_sz;
+		state->out_data->data = lws_realloc(state->out_data->data, current_size + frame_size);
+		state->out_data->data_sz = current_size + frame_size;
+	}
 
-	char *frame = (char *)state->out_data->data;
+	char *frame = (char *)state->out_data->data + current_size;
 	payload_len_small &= 0x7f;
 	*frame = finNopcode;
 	*(frame + 1) = payload_len_small;
@@ -379,8 +382,6 @@ int libwebsock_handle_recv(libwebsock_client_state *state, const char *data, siz
 	{
 		return -1;
 	}
-
-	libwebsock_cleanup_indata(state);
 
 	int (*frame_fn)(libwebsock_client_state * state);
 	static int (*const libwebsock_frame_lookup_table[512])(
