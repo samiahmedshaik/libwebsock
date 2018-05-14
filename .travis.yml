@@ -5,9 +5,10 @@ before_install:
   - sudo apt-get update -qq
   - sudo pip install --upgrade pip
   - sudo pip install --upgrade six
+  - sudo pip install --upgrade Markdown
   - sudo pip install autobahntestsuite
 
 script:
   - ./autogen.sh && ./configure && sudo make install && export LD_LIBRARY_PATH=/usr/local/lib
   - cd examples && make autobahn-echo && ./autobahn-echo 9001 &
-  - wstest --help
+  - wstest -m fuzzingclient
