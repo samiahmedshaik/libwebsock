@@ -487,7 +487,7 @@ int libwebsock_handle_recv(libwebsock_client_state *state, const char *data, siz
 	}
 
 	// didn't get the full length
-	if (current->state <= sw_got_full_len)
+	if (state->current_frame != NULL && state->current_frame->state <= sw_got_full_len)
 	{
 		state->flags |= STATE_NEEDS_MORE_DATA;
 	}
