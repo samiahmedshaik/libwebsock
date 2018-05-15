@@ -47,24 +47,7 @@ void write_log(libwebsock_logger logger, enum libwebsock_loglevel level, const c
 	localtime_r(&cur.tv_sec, &localtimeBuffer);
 	strftime(strTime, sizeof(strTime), "%F %T", &localtimeBuffer);
 
-	//don't care performance, safety first
-	FILE *file = fopen(logger.filename, "a");
-	if (file != 0)
-	{
-		fprintf(file, "%s %6d %-5s %s: %s\n",
-				strTime,
-				getpid(),
-				strloglevel[level],
-				function,
-				cbuffer);
-
-		if (file != NULL)
-		{
-			fclose(file);
-			file = NULL;
-		}
-	}
-	else
+	if (logger.filename == NULL || logger.filename[0] == '\0')
 	{
 		fprintf(stderr, "%s %6d %-5s %s: %s\n",
 				strTime,
@@ -72,5 +55,35 @@ void write_log(libwebsock_logger logger, enum libwebsock_loglevel level, const c
 				strloglevel[level],
 				function,
 				cbuffer);
+	}
+	else
+	{
+
+		//don't care performance, safety first
+		FILE *file = fopen(logger.filename, "a");
+		if (file != 0)
+		{
+			fprintf(file, "%s %6d %-5s %s: %s\n",
+					strTime,
+					getpid(),
+					strloglevel[level],
+					function,
+					cbuffer);
+
+			if (file != NULL)
+			{
+				fclose(file);
+				file = NULL;
+			}
+		}
+		else
+		{
+			fprintf(stderr, "%s %6d %-5s %s: %s\n",
+					strTime,
+					getpid(),
+					strloglevel[level],
+					function,
+					cbuffer);
+		}
 	}
 }

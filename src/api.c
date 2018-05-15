@@ -143,8 +143,7 @@ void libwebsock_client_destroy(libwebsock_client_state *state)
     }
     libwebsock_cleanup_outdata(state);
     libwebsock_free_all_frames(state);
+    loginfo("websocket client destroyed");
     lws_free(state);
-  }
-
-  loginfo("websocket client destroyed");
+  }  
 }

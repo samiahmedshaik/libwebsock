@@ -11,13 +11,16 @@ of the WebSocket protocol.
 * Easy to use
 * No dependencies on any external libraries
 * No failures on Autobahn Test suite
+* Valgrind clean
+* Single-threaded (synchronization is developers responsibility)
+* To get started, have a look at [1] in the examples directory of the package. A sample echo server is implemented.
+* Current Travis-CI build status [4]
 
 Note: As this library is only for processing WebSocket protocol messages, building the communication layer is the responsibility of the developer.
 
- [1]: https://github.com/payden/libwebsock/blob/master/examples/echo.c
- [2]: http://libevent.org
+ [1]: https://github.com/samiahmedshaik/libwebsock/blob/master/examples/echo-autobahn.c
  [3]: http://paydensutherland.com/autobahn
- [4]: https://travis-ci.org/payden/libwebsock.png
- [5]: https://travis-ci.org/payden/libwebsock
+ [4]: https://travis-ci.org/samiahmedshaik/libwebsock.png
+ [5]: https://travis-ci.org/samiahmedshaik/libwebsock
  [6]: https://github.com/payden/libwebsock/wiki/Installation
  [7]: https://github.com/payden/libwebsock/wiki/API

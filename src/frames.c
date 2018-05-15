@@ -75,8 +75,12 @@ int libwebsock_handle_control_frame(libwebsock_client_state *state)
   libwebsock_frame *ctl_frame = state->current_frame;
   logdebug("calling control callback method");
   retval = state->oncontrol(state, ctl_frame);
-  ctl_frame->state = 0;
-  ctl_frame->rawdata_idx = 0;
+  
+  if (state->current_frame != NULL)
+  {
+    state->current_frame->state = 0;
+    state->current_frame->rawdata_idx = 0;
+  }
   return retval;
 }
 
