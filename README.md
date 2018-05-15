@@ -13,12 +13,13 @@ of the WebSocket protocol.
 * No failures on Autobahn Test suite
 * Valgrind clean
 * Single-threaded (synchronization is developers responsibility)
-* To get started, have a look at [1] in the examples directory of the package. A sample echo server is implemented.
-* Current Travis-CI build status [4]
+* To get started, have a look at [autobahn-echo.c][1] in the examples directory of the package. A sample echo server is implemented.
+* Current Travis-CI build status:
+[![Build Status][4]][5]
 
 Note: As this library is only for processing WebSocket protocol messages, building the communication layer is the responsibility of the developer.
 
- [1]: https://github.com/samiahmedshaik/libwebsock/blob/master/examples/echo-autobahn.c
+ [1]: https://github.com/samiahmedshaik/libwebsock/blob/master/examples/autobahn-echo.c
  [3]: http://paydensutherland.com/autobahn
  [4]: https://travis-ci.org/samiahmedshaik/libwebsock.png
  [5]: https://travis-ci.org/samiahmedshaik/libwebsock
