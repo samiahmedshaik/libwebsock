@@ -117,6 +117,35 @@ int libwebsock_make_binary_data_frame(libwebsock_client_state *state, char *in_d
   return libwebsock_make_fragment(state, in_data, payload_len, flags);
 }
 
+int libwebsock_make_init_text_continuation_frame_with_length(libwebsock_client_state *state, char *strdata, unsigned int payload_len)
+{
+  logdebug("continuation init text data frame for payload of size %u", payload_len);
+  int flags = WS_OPCODE_TEXT;
+  return libwebsock_make_fragment(state, strdata, payload_len, flags);
+}
+
+int libwebsock_make_init_binary_continuation_frame_with_length(libwebsock_client_state *state, char *in_data, unsigned int payload_len)
+{
+  logdebug("continuation init binary data frame for payload of size %u", payload_len);
+  int flags = WS_OPCODE_BINARY;
+  return libwebsock_make_fragment(state, in_data, payload_len, flags);
+}
+
+int libwebsock_make_text_continuation_frame_with_length(libwebsock_client_state *state, char *strdata, unsigned int payload_len)
+{
+  logdebug("continuation text data frame for payload of size %u", payload_len);
+  int flags = WS_OPCODE_CONTINUE;
+  return libwebsock_make_fragment(state, strdata, payload_len, flags);
+}
+
+int libwebsock_make_binary_continuation_frame_with_length(libwebsock_client_state *state, char *in_data, unsigned int payload_len)
+{
+  logdebug("continuation binary data frame for payload of size %u", payload_len);
+  int flags = WS_OPCODE_CONTINUE;
+  return libwebsock_make_fragment(state, in_data, payload_len, flags);
+}
+
+
 libwebsock_client_state *libwebsock_client_init(void)
 {
   libwebsock_client_state *state = (libwebsock_client_state *)lws_calloc(sizeof(libwebsock_client_state));
@@ -147,3 +176,4 @@ void libwebsock_client_destroy(libwebsock_client_state *state)
     lws_free(state);
   }  
 }
+
