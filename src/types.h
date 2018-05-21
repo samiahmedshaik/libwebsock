@@ -21,6 +21,8 @@
 #define TYPES_H_
 
 #define MAX_SUB_PROTOCOLS 8
+#define MAX_SUB_PROTOCOL_LEN 128
+#define MAX_PATH 4096
 
 enum WS_FRAME_STATE
 {
@@ -80,7 +82,7 @@ enum libwebsock_loglevel
 typedef struct _libwebsock_logger
 {
         enum libwebsock_loglevel level;
-        const char *filename;
+        char filename[MAX_PATH];
 } libwebsock_logger;
 
 typedef struct _libwebsock_client_state
@@ -88,7 +90,7 @@ typedef struct _libwebsock_client_state
         int flags;
         char hostname[64];
         libwebsock_string *out_data;
-        libwebsock_frame *current_frame;        
+        libwebsock_frame *current_frame;
         int (*onmessage)(struct _libwebsock_client_state *, libwebsock_message *);
         int (*oncontrol)(struct _libwebsock_client_state *, libwebsock_frame *);
         int (*onclose)(struct _libwebsock_client_state *);
@@ -97,10 +99,10 @@ typedef struct _libwebsock_client_state
         int (*onerror)(struct _libwebsock_client_state *, unsigned short code);
         libwebsock_close_info *close_info;
         libwebsock_logger logger;
-        const char *supported_sub_protocols[MAX_SUB_PROTOCOLS];
+        char supported_sub_protocols[MAX_SUB_PROTOCOLS][MAX_SUB_PROTOCOL_LEN];
         void (*writelog)(libwebsock_logger logger, enum libwebsock_loglevel level, const char *function, const char *fmt, ...);
+        void *context;
 
 } libwebsock_client_state;
 
 #endif /* TYPES_H_ */
-
