@@ -100,7 +100,7 @@ int libwebsock_make_text_data_frame_with_length(libwebsock_client_state *state, 
 {
     logdebug("text data frame for payload of size %u", payload_len);
 
-    if (state->flags & STATE_SENT_INIT_CONTINUOUS_FRAME)
+    if (state->flags & STATE_CONTINUOUS_FRAME_IN_PROGRESS)
     {
         logerror("Invalid call. A continous frame is in progress.");
         return -1;
@@ -114,7 +114,7 @@ int libwebsock_make_text_data_frame(libwebsock_client_state *state, char *strdat
 {
     unsigned int len = strlen(strdata);
 
-    if (state->flags & STATE_SENT_INIT_CONTINUOUS_FRAME)
+    if (state->flags & STATE_CONTINUOUS_FRAME_IN_PROGRESS)
     {
         logerror("Invalid call. A continous frame is in progress.");
         return -1;
@@ -128,7 +128,7 @@ int libwebsock_make_binary_data_frame(libwebsock_client_state *state, char *in_d
 {
     logdebug("binary data frame for payload of size %u", payload_len);
 
-    if (state->flags & STATE_SENT_INIT_CONTINUOUS_FRAME)
+    if (state->flags & STATE_CONTINUOUS_FRAME_IN_PROGRESS)
     {
         logerror("Invalid call. A continous frame is in progress.");
         return -1;
@@ -140,7 +140,7 @@ int libwebsock_make_binary_data_frame(libwebsock_client_state *state, char *in_d
 int libwebsock_make_init_text_continuation_frame_with_length(libwebsock_client_state *state, char *strdata, unsigned int payload_len)
 {
     logdebug("init continuation text data frame for payload of size %u", payload_len);
-    state->flags |= STATE_SENT_INIT_CONTINUOUS_FRAME;
+    state->flags |= STATE_CONTINUOUS_FRAME_IN_PROGRESS;
     int flags = WS_OPCODE_TEXT;
     return libwebsock_make_fragment(state, strdata, payload_len, flags);
 }
@@ -148,7 +148,7 @@ int libwebsock_make_init_text_continuation_frame_with_length(libwebsock_client_s
 int libwebsock_make_init_binary_continuation_frame_with_length(libwebsock_client_state *state, char *in_data, unsigned int payload_len)
 {
     logdebug("init continuation binary data frame for payload of size %u", payload_len);
-    state->flags |= STATE_SENT_INIT_CONTINUOUS_FRAME;
+    state->flags |= STATE_CONTINUOUS_FRAME_IN_PROGRESS;
     int flags = WS_OPCODE_BINARY;
     return libwebsock_make_fragment(state, in_data, payload_len, flags);
 }
@@ -170,7 +170,7 @@ int libwebsock_make_binary_continuation_frame_with_length(libwebsock_client_stat
 int libwebsock_make_end_text_continuation_frame_with_length(libwebsock_client_state *state, char *strdata, unsigned int payload_len)
 {
     logdebug("end continuation text data frame for payload of size %u", payload_len);
-    state->flags &= ~STATE_SENT_INIT_CONTINUOUS_FRAME;
+    state->flags &= ~STATE_CONTINUOUS_FRAME_IN_PROGRESS;
     int flags = WS_FRAGMENT_FIN | WS_OPCODE_CONTINUE;
     return libwebsock_make_fragment(state, strdata, payload_len, flags);
 }
@@ -178,7 +178,7 @@ int libwebsock_make_end_text_continuation_frame_with_length(libwebsock_client_st
 int libwebsock_make_end_binary_continuation_frame_with_length(libwebsock_client_state *state, char *in_data, unsigned int payload_len)
 {
     logdebug("end continuation binary data frame for payload of size %u", payload_len);
-    state->flags &= ~STATE_SENT_INIT_CONTINUOUS_FRAME;
+    state->flags &= ~STATE_CONTINUOUS_FRAME_IN_PROGRESS;
     int flags = WS_FRAGMENT_FIN | WS_OPCODE_CONTINUE;
     return libwebsock_make_fragment(state, in_data, payload_len, flags);
 }
