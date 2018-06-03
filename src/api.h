@@ -32,6 +32,8 @@ int libwebsock_make_text_data_frame(libwebsock_client_state *state, char *strdat
 int libwebsock_make_text_data_frame_with_length(libwebsock_client_state *state, char *strdata, unsigned int payload_len);
 int libwebsock_make_init_text_continuation_frame_with_length(libwebsock_client_state *state, char *strdata, unsigned int payload_len);
 int libwebsock_make_init_binary_continuation_frame_with_length(libwebsock_client_state *state, char *in_data, unsigned int payload_len);
+int libwebsock_make_end_text_continuation_frame_with_length(libwebsock_client_state *state, char *strdata, unsigned int payload_len);
+int libwebsock_make_end_binary_continuation_frame_with_length(libwebsock_client_state *state, char *in_data, unsigned int payload_len);
 int libwebsock_make_text_continuation_frame_with_length(libwebsock_client_state *state, char *strdata, unsigned int payload_len);
 int libwebsock_make_binary_continuation_frame_with_length(libwebsock_client_state *state, char *in_data, unsigned int payload_len);
 libwebsock_client_state *libwebsock_client_init(void);
