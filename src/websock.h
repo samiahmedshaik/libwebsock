@@ -96,7 +96,7 @@
 #define STATE_PROCESSING_ERROR (1 << 5)
 #define STATE_NEEDS_MORE_DATA (1 << 6)
 #define STATE_SHOULD_CLOSE (1 << 7)
-#define STATE_SENT_INIT_CONTINUOUS_FRAME (1 << 8)
+#define STATE_CONTINUOUS_FRAME_IN_PROGRESS (1 << 8)
 
 void libwebsock_cleanup_outdata(libwebsock_client_state *state);
 void libwebsock_populate_close_info_from_frame(libwebsock_close_info **info, libwebsock_frame *close_frame);
